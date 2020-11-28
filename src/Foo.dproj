@@ -96,16 +96,14 @@
         </DelphiCompile>
         <DCCReference Include="Main.pas">
             <Form>fMain</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="DatasetLoop.pas">
             <Form>fDatasetLoop</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="ClienteServidor.pas">
             <Form>fClienteServidor</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="uMensagens.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

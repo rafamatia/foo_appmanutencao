@@ -12,7 +12,7 @@ type
     FPath: AnsiString;
   public
     constructor Create;
-    //Tipo do parâmetro não pode ser alterado
+    // Tipo do parâmetro não pode ser alterado
     function SalvarArquivos(AData: OleVariant): Boolean;
   end;
 
@@ -54,13 +54,13 @@ begin
   for i := 0 to QTD_ARQUIVOS_ENVIAR do
   begin
     cds.Append;
-    TBlobField(cds.FieldByName('Arquivo')).LoadFromFile(FPath);
+    TBlobField(cds.FieldByName('Arquivo')).LoadFromFile(String(FPath));
     cds.Post;
 
-    {$REGION Simulação de erro, não alterar}
-    if i = (QTD_ARQUIVOS_ENVIAR/2) then
+{$REGION Simulação de erro, não alterar}
+    if i = (QTD_ARQUIVOS_ENVIAR / 2) then
       FServidor.SalvarArquivos(NULL);
-    {$ENDREGION}
+{$ENDREGION}
   end;
 
   FServidor.SalvarArquivos(cds.Data);
@@ -75,7 +75,7 @@ begin
   for i := 0 to QTD_ARQUIVOS_ENVIAR do
   begin
     cds.Append;
-    TBlobField(cds.FieldByName('Arquivo')).LoadFromFile(FPath);
+    TBlobField(cds.FieldByName('Arquivo')).LoadFromFile(String(FPath));
     cds.Post;
   end;
 
@@ -85,7 +85,7 @@ end;
 procedure TfClienteServidor.FormCreate(Sender: TObject);
 begin
   inherited;
-  FPath := IncludeTrailingBackslash(ExtractFilePath(ParamStr(0))) + 'pdf.pdf';
+  FPath := AnsiString(IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0))) + 'pdf.pdf');
   FServidor := TServidor.Create;
 end;
 
@@ -100,28 +100,28 @@ end;
 
 constructor TServidor.Create;
 begin
-  FPath := ExtractFilePath(ParamStr(0)) + 'Servidor\';
+  FPath := AnsiString(ExtractFilePath(ParamStr(0)) + 'Servidor\');
 end;
 
 function TServidor.SalvarArquivos(AData: OleVariant): Boolean;
 var
-  cds: TClientDataSet;
+  cds: TClientDataset;
   FileName: string;
 begin
+  Result := False;
   try
     cds := TClientDataset.Create(nil);
     cds.Data := AData;
 
-    {$REGION Simulação de erro, não alterar}
+{$REGION Simulação de erro, não alterar}
     if cds.RecordCount = 0 then
       Exit;
-    {$ENDREGION}
-
+{$ENDREGION}
     cds.First;
 
     while not cds.Eof do
     begin
-      FileName := FPath + cds.RecNo.ToString + '.pdf';
+      FileName := String(FPath) + cds.RecNo.ToString + '.pdf';
       if TFile.Exists(FileName) then
         TFile.Delete(FileName);
 
@@ -131,7 +131,6 @@ begin
 
     Result := True;
   except
-    Result := False;
     raise;
   end;
 end;
