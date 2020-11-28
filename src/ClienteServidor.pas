@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls, Datasnap.DBClient, Data.DB;
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls, Datasnap.DBClient, Data.DB, uMensagens, uRotinas;
 
 type
   TServidor = class
@@ -24,6 +24,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure btEnviarSemErrosClick(Sender: TObject);
     procedure btEnviarComErrosClick(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
   private
     FPath: AnsiString;
     FServidor: TServidor;
@@ -69,17 +70,50 @@ end;
 procedure TfClienteServidor.btEnviarSemErrosClick(Sender: TObject);
 var
   cds: TClientDataset;
-  i: Integer;
+  intFor: Integer;
+  Inicio, Fim: Cardinal;
+  Tempo: Extended;
 begin
-  cds := InitDataset;
-  for i := 0 to QTD_ARQUIVOS_ENVIAR do
+  if (not(FileExists(String(FPath)))) then
   begin
-    cds.Append;
-    TBlobField(cds.FieldByName('Arquivo')).LoadFromFile(String(FPath));
-    cds.Post;
+    MensagemAviso('Atenção! Não é possível enviar o arquivo ao servidor, pois o arquivo "' + String(FPath) + '" não existe.' + sLineBreak + 'Adicione o arquivo no caminho demonstrado nesta mensagem, e tente novamente.');
+    Exit;
   end;
 
-  FServidor.SalvarArquivos(cds.Data);
+  try
+    Inicio := GetTickCount;
+    cds := InitDataset;
+    try
+      for intFor := 0 to QTD_ARQUIVOS_ENVIAR do
+      begin
+        cds.Append;
+        TBlobField(cds.FieldByName('Arquivo')).LoadFromFile(String(FPath));
+        TIntegerField(cds.FieldByName('id')).AsInteger := intFor;
+        cds.Post;
+
+        try
+          FServidor.SalvarArquivos(cds.Data);
+        finally
+          cds.EmptyDataSet;
+        end;
+      end;
+
+      Fim := GetTickCount;
+      Tempo := (Fim - Inicio);
+      MensagemInformacao('Arquivos Enviados ao Servidor com Sucesso!' + sLineBreak + 'Tempo de processamento: ' + retornarTempoPorExtenso(Tempo));
+    finally
+      FreeAndNil(cds);
+    end;
+  except
+    on E: Exception do
+      MensagemErro('Ocorreu um erro ao enviar os arquivos ao servidor!' + sLineBreak + sLineBreak + 'Detalhes Técnicos:' + sLineBreak + E.Message);
+  end;
+end;
+
+procedure TfClienteServidor.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  if (FServidor <> nil) then
+    FreeAndNil(FServidor);
 end;
 
 procedure TfClienteServidor.FormCreate(Sender: TObject);
@@ -93,6 +127,7 @@ function TfClienteServidor.InitDataset: TClientDataset;
 begin
   Result := TClientDataset.Create(nil);
   Result.FieldDefs.Add('Arquivo', ftBlob);
+  Result.FieldDefs.Add('id', ftInteger);
   Result.CreateDataSet;
 end;
 
@@ -111,27 +146,36 @@ begin
   Result := False;
   try
     cds := TClientDataset.Create(nil);
-    cds.Data := AData;
+    try
+      cds.Data := AData;
 
 {$REGION Simulação de erro, não alterar}
-    if cds.RecordCount = 0 then
-      Exit;
+      if cds.RecordCount = 0 then
+        Exit;
 {$ENDREGION}
-    cds.First;
+      if not DirectoryExists(String(FPath)) then
+        ForceDirectories(String(FPath));
 
-    while not cds.Eof do
-    begin
-      FileName := String(FPath) + cds.RecNo.ToString + '.pdf';
-      if TFile.Exists(FileName) then
-        TFile.Delete(FileName);
+      cds.First;
 
-      TBlobField(cds.FieldByName('Arquivo')).SaveToFile(FileName);
-      cds.Next;
+      while not cds.Eof do
+      begin
+        FileName := String(FPath) + TIntegerField(cds.FieldByName('id')).AsString + '.pdf';
+
+        if TFile.Exists(FileName) then
+          TFile.Delete(FileName);
+
+        TBlobField(cds.FieldByName('Arquivo')).SaveToFile(FileName);
+        cds.Next;
+      end;
+
+      Result := True;
+    finally
+      FreeAndNil(cds);
     end;
-
-    Result := True;
   except
-    raise;
+    on E: Exception do
+      raise Exception.Create(E.Message);
   end;
 end;
 

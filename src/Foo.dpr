@@ -5,7 +5,8 @@ uses
   Main in 'Main.pas' {fMain},
   DatasetLoop in 'DatasetLoop.pas' {fDatasetLoop},
   ClienteServidor in 'ClienteServidor.pas' {fClienteServidor},
-  uMensagens in 'uMensagens.pas';
+  uMensagens in 'uMensagens.pas',
+  uRotinas in 'uRotinas.pas';
 
 {$R *.res}
 
