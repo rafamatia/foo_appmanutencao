@@ -14,6 +14,7 @@ type
     constructor Create;
     // Tipo do parâmetro não pode ser alterado
     function SalvarArquivos(AData: OleVariant): Boolean;
+    procedure ApagarTodosOsArquivos;
   end;
 
   TfClienteServidor = class(TForm)
@@ -49,22 +50,39 @@ uses
 procedure TfClienteServidor.btEnviarComErrosClick(Sender: TObject);
 var
   cds: TClientDataset;
-  i: Integer;
+  intFor: Integer;
 begin
   cds := InitDataset;
-  for i := 0 to QTD_ARQUIVOS_ENVIAR do
-  begin
-    cds.Append;
-    TBlobField(cds.FieldByName('Arquivo')).LoadFromFile(String(FPath));
-    cds.Post;
-
+  try
+    try
+      for intFor := 0 to QTD_ARQUIVOS_ENVIAR do
+      begin
+        cds.Append;
+        TBlobField(cds.FieldByName('Arquivo')).LoadFromFile(String(FPath));
+        TIntegerField(cds.FieldByName('id')).AsInteger := intFor;
+        cds.Post;
 {$REGION Simulação de erro, não alterar}
-    if i = (QTD_ARQUIVOS_ENVIAR / 2) then
-      FServidor.SalvarArquivos(NULL);
+        if intFor = (QTD_ARQUIVOS_ENVIAR / 2) then
+          FServidor.SalvarArquivos(NULL);
 {$ENDREGION}
-  end;
+        try
+          FServidor.SalvarArquivos(cds.Data);
+        finally
+          cds.EmptyDataSet;
+        end;
+      end;
 
-  FServidor.SalvarArquivos(cds.Data);
+      FServidor.SalvarArquivos(cds.Data);
+    finally
+      FreeAndNil(cds);
+    end;
+  except
+    on E: Exception do
+    begin
+      FServidor.ApagarTodosOsArquivos;
+      MensagemErro('Ocorreu um erro ao enviar os arquivos ao servidor!' + sLineBreak + sLineBreak + 'Detalhes Técnicos:' + sLineBreak + E.Message);
+    end;
+  end;
 end;
 
 procedure TfClienteServidor.btEnviarSemErrosClick(Sender: TObject);
@@ -133,9 +151,22 @@ end;
 
 { TServidor }
 
+procedure TServidor.ApagarTodosOsArquivos;
+var
+  srArquivo: TSearchRec;
+  intRegistro: Integer;
+begin
+  intRegistro := FindFirst(Self.FPath + '*.*', faAnyFile, srArquivo);
+  while (intRegistro = 0) do
+  begin
+    DeleteFile(Self.FPath + '\' + srArquivo.Name);
+    intRegistro := FindNext(srArquivo);
+  end;
+end;
+
 constructor TServidor.Create;
 begin
-  FPath := AnsiString(ExtractFilePath(ParamStr(0)) + 'Servidor\');
+  Self.FPath := AnsiString(ExtractFilePath(ParamStr(0)) + 'Servidor\');
 end;
 
 function TServidor.SalvarArquivos(AData: OleVariant): Boolean;

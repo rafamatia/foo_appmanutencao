@@ -16,7 +16,7 @@ type
     procedure btStreamsClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
   private
-    procedure LimparMemoria;
+    procedure limparMemoria;
   public
   end;
 
@@ -46,7 +46,7 @@ begin
   Application.Terminate;
 end;
 
-procedure TfMain.LimparMemoria;
+procedure TfMain.limparMemoria;
 var
   MainHandle: THandle;
 begin
